@@ -7,7 +7,7 @@
 import { AuthProviderInfo } from "@gitpod/gitpod-protocol";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "./user-context";
-import { getGitpodService, gitpodHostUrl } from "./service/service";
+import { getGitpodService } from "./service/service";
 import { iconForAuthProvider, openAuthorizeWindow, simplifyProviderName } from "./provider-utils";
 import gitpod from './images/gitpod.svg';
 import gitpodIcon from './icons/gitpod.svg';
