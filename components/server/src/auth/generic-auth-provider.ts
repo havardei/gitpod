@@ -302,10 +302,7 @@ export class GenericAuthProvider implements AuthProvider {
             await TosFlow.clear(request.session);
 
             increaseLoginCounter("failed", this.host);
-
-            log.info(cxt, `(${strategyName}) Received OAuth2 error, thus redirecting to /sorry (${error})`, { ...defaultLogPayload, requestUrl: request.originalUrl });
-            response.redirect(this.getSorryUrl(`OAuth2 error. (${error})`));
-            return;
+            return this.sendCompletionRedirectWithError(response, { error });
         }
 
         let result: Parameters<VerifyCallback>;
@@ -391,6 +388,8 @@ export class GenericAuthProvider implements AuthProvider {
     }
 
     protected sendCompletionRedirectWithError(response: express.Response, error: object): void {
+        log.info(`(${this.strategyName}) Send completion redirect with error`, { error });
+
         const url = this.env.hostUrl.with({ pathname: '/complete-auth', search: "message=error:" + Buffer.from(JSON.stringify(error), "utf-8").toString('base64') }).toString();
         response.redirect(url);
     }

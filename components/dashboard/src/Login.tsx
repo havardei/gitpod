@@ -8,7 +8,7 @@ import { AuthProviderInfo } from "@gitpod/gitpod-protocol";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "./user-context";
 import { getGitpodService, gitpodHostUrl } from "./service/service";
-import { iconForAuthProvider, simplifyProviderName } from "./provider-utils";
+import { iconForAuthProvider, openAuthorizeWindow, simplifyProviderName } from "./provider-utils";
 import gitpod from './images/gitpod.svg';
 import gitpodIcon from './icons/gitpod.svg';
 import automate from "./images/welcome/automate.svg";
@@ -17,6 +17,7 @@ import collaborate from "./images/welcome/collaborate.svg";
 import customize from "./images/welcome/customize.svg";
 import fresh from "./images/welcome/fresh.svg";
 import prebuild from "./images/welcome/prebuild.svg";
+import { EmailAddressAlreadyTakenPayload } from "@gitpod/gitpod-protocol/lib/auth";
 
 
 
@@ -41,40 +42,49 @@ export function Login() {
     const showWelcome = !hasLoggedInBefore();
 
     const [authProviders, setAuthProviders] = useState<AuthProviderInfo[]>([]);
+    const [emailTaken, setEmailTaken] = useState<EmailAddressAlreadyTakenPayload | undefined>(undefined);
+    const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         (async () => {
             setAuthProviders(await getGitpodService().server.getAuthProviders());
         })();
-
-        const listener = (event: MessageEvent<any>) => {
-            // todo: check event.origin
-
-            if (event.data === "success") {
-                if (event.source && "close" in event.source && event.source.close) {
-                    console.log(`try to close window`);
-                    event.source.close();
-                }
-
-                (async () => {
-                    await getGitpodService().reconnect();
-                    setUser(await getGitpodService().server.getLoggedInUser());
-                    markLoggedIn();
-                })();
-            }
-        };
-        window.addEventListener("message", listener);
-        return () => {
-            window.removeEventListener("message", listener);
-        }
     }, [])
 
-    const openLogin = (host: string) => {
-        const url = getLoginUrl(host);
-        const newWindow = window.open(url, "gitpod-login");
-        if (!newWindow) {
-            console.log(`Failed to open login window for ${host}`);
+    const openLogin = async (host: string) => {
+        setEmailTaken(undefined);
+        setErrorMessage(undefined);
+
+        try {
+            await openAuthorizeWindow({
+                login: true,
+                host,
+                onSuccess: () => updateUser(),
+                onError: (error) => {
+                    if (typeof error === "string") {
+                        try {
+                            const payload = JSON.parse(error);
+                            if (EmailAddressAlreadyTakenPayload.is(payload)) {
+                                setEmailTaken(payload);
+                            } else {
+                                setErrorMessage(error);
+                            }
+                        } catch (error) {
+                            console.log(error);
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.log(error)
         }
+    }
+
+    const updateUser = async () => {
+        await getGitpodService().reconnect();
+        const user = await getGitpodService().server.getLoggedInUser();
+        setUser(user);
+        markLoggedIn();
     }
 
     return (<div id="login-container" className="z-50 flex w-screen h-screen">
@@ -126,6 +136,12 @@ export function Login() {
                         </div>
                     </div>
                 </div>
+                {emailTaken && (<div className="bg-gitpod-kumquat-light rounded-md p-3 text-gitpod-red text-sm mb-2">
+                    {`Email address is already in use. Please log in with ${emailTaken.otherUser.authHost}.`}
+                </div>)}
+                {errorMessage && (<div className="bg-gitpod-kumquat-light rounded-md p-3 text-gitpod-red text-sm mb-2">
+                    {errorMessage}
+                </div>)}
                 <div className="flex-none mx-auto h-20 text-center">
                     <span className="text-gray-400">
                         By signing in, you agree to our <a className="underline underline-thickness-thin underline-offset-small hover:text-gray-600" target="gitpod-terms" href="https://www.gitpod.io/terms/">terms of service</a>.
@@ -135,12 +151,4 @@ export function Login() {
 
         </div>
     </div>);
-}
-
-function getLoginUrl(host: string) {
-    const returnTo = gitpodHostUrl.with({ pathname: 'complete-auth', search: 'message=success' }).toString();
-    return gitpodHostUrl.withApi({
-        pathname: '/login',
-        search: `host=${host}&returnTo=${encodeURIComponent(returnTo)}`
-    }).toString();
 }
