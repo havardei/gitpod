@@ -5,7 +5,7 @@
  */
 
 export interface SelectAccountPayload {
-    currentUser?: {
+    currentUser: {
         name: string;
         avatarUrl: string;
         authHost: string;
@@ -23,5 +23,18 @@ export interface SelectAccountPayload {
 export namespace SelectAccountPayload {
     export function is(data: any): data is SelectAccountPayload {
         return typeof data === "object" && "currentUser" in data && "otherUser" in data;
+    }
+}
+
+export interface EmailAddressAlreadyTakenPayload {
+    otherUser: {
+        name: string;
+        avatarUrl: string;
+        authHost: string;
+    }
+}
+export namespace EmailAddressAlreadyTakenPayload {
+    export function is(data: any): data is SelectAccountPayload {
+        return typeof data === "object" && "otherUser" in data;
     }
 }

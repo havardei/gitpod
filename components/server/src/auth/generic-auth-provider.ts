@@ -17,9 +17,8 @@ import { URL } from 'url';
 import { runInNewContext } from "vm";
 import { AuthFlow, AuthProvider } from "../auth/auth-provider";
 import { AuthProviderParams, AuthUserSetup } from "../auth/auth-provider";
-import { AuthException, SelectAccountException } from "../auth/errors";
+import { AuthException, EmailAddressAlreadyTakenException, SelectAccountException } from "../auth/errors";
 import { GitpodCookie } from "./gitpod-cookie";
-import { SelectAccountCookie } from "../user/select-account-cookie";
 import { Env } from "../env";
 import { getRequestingClientInfo } from "../express-util";
 import { TokenProvider } from '../user/token-provider';
@@ -64,7 +63,6 @@ export class GenericAuthProvider implements AuthProvider {
     @inject(UserDB) protected userDb: UserDB;
     @inject(Env) protected env: Env;
     @inject(GitpodCookie) protected gitpodCookie: GitpodCookie;
-    @inject(SelectAccountCookie) protected selectAccountCookie: SelectAccountCookie;
     @inject(UserService) protected readonly userService: UserService;
     @inject(AuthProviderService) protected readonly authProviderService: AuthProviderService;
     @inject(LoginCompletionHandler) protected readonly loginCompletionHandler: LoginCompletionHandler;
@@ -347,12 +345,10 @@ export class GenericAuthProvider implements AuthProvider {
             await TosFlow.clear(request.session);
 
             if (SelectAccountException.is(err)) {
-                this.selectAccountCookie.set(response, err.payload);
-
-                // option 1: send as GET param on redirect
-                const url = this.env.hostUrl.with({ pathname: '/flow-result', search: "message=error:" + Buffer.from(JSON.stringify(err.payload), "utf-8").toString('base64') }).toString();
-                response.redirect(url);
-                return;
+                return this.sendCompletionRedirectWithError(response, err.payload);
+            }
+            if (EmailAddressAlreadyTakenException.is(err)) {
+                return this.sendCompletionRedirectWithError(response, err.payload);
             }
 
             let message = 'Authorization failed. Please try again.';
@@ -392,6 +388,11 @@ export class GenericAuthProvider implements AuthProvider {
                 await this.loginCompletionHandler.complete(request, response, { user, returnToUrl: returnTo, authHost: host, elevateScopes });
             }
         }
+    }
+
+    protected sendCompletionRedirectWithError(response: express.Response, error: object): void {
+        const url = this.env.hostUrl.with({ pathname: '/complete-auth', search: "message=error:" + Buffer.from(JSON.stringify(error), "utf-8").toString('base64') }).toString();
+        response.redirect(url);
     }
 
     /**
@@ -438,7 +439,7 @@ export class GenericAuthProvider implements AuthProvider {
 
                 if (!currentGitpodUser) {
 
-                    // we disallow 
+                    // signup new accounts with email adresses already taken is disallowed
                     const existingUserWithSameEmail = (await this.userDb.findUsersByEmail(primaryEmail))[0];
                     if (existingUserWithSameEmail) {
                         try {

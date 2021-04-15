@@ -138,7 +138,7 @@ export function Login() {
 }
 
 function getLoginUrl(host: string) {
-    const returnTo = gitpodHostUrl.with({ pathname: 'flow-result', search: 'message=success' }).toString();
+    const returnTo = gitpodHostUrl.with({ pathname: 'complete-auth', search: 'message=success' }).toString();
     return gitpodHostUrl.withApi({
         pathname: '/login',
         search: `host=${host}&returnTo=${encodeURIComponent(returnTo)}`

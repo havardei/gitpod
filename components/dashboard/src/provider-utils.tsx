@@ -37,7 +37,7 @@ function simplifyProviderName(host: string) {
 }
 
 async function openAuthorizeWindow({ host, scopes, onSuccess, onError }: { host: string, scopes?: string[], onSuccess?: (payload?: string) => void, onError?: (error?: string) => void }) {
-    const returnTo = gitpodHostUrl.with({ pathname: 'flow-result', search: 'message=success' }).toString();
+    const returnTo = gitpodHostUrl.with({ pathname: 'complete-auth', search: 'message=success' }).toString();
     const url = gitpodHostUrl.withApi({
         pathname: '/authorize',
         search: `returnTo=${encodeURIComponent(returnTo)}&host=${host}&override=true&scopes=${(scopes || []).join(',')}`

@@ -5,7 +5,7 @@
  */
 
 import { Identity } from "@gitpod/gitpod-protocol";
-import { SelectAccountPayload } from "@gitpod/gitpod-protocol/lib/auth";
+import { EmailAddressAlreadyTakenPayload, SelectAccountPayload } from "@gitpod/gitpod-protocol/lib/auth";
 
 export interface TosNotAcceptedYetException extends Error {
     readonly identity: Identity;
@@ -64,6 +64,19 @@ export namespace SelectAccountException {
         return AuthException.create(type, message, payload);
     }
     export function is(error: any): error is SelectAccountException {
+        return AuthException.is(error) && error.authException === type;
+    }
+}
+
+export interface EmailAddressAlreadyTakenException extends AuthException {
+    payload: EmailAddressAlreadyTakenPayload;
+}
+export namespace EmailAddressAlreadyTakenException {
+    const type = "EmailAddressAlreadyTakenException";
+    export function create(message: string, payload: EmailAddressAlreadyTakenPayload) {
+        return AuthException.create(type, message, payload);
+    }
+    export function is(error: any): error is EmailAddressAlreadyTakenException {
         return AuthException.is(error) && error.authException === type;
     }
 }
