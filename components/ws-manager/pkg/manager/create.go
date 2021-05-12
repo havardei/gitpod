@@ -305,7 +305,7 @@ func (m *Manager) createDefiniteWorkspacePod(startContext *startWorkspaceContext
 	//   - the TAP driver documentation says so (see https://www.kernel.org/doc/Documentation/networking/tuntap.txt)
 	//   - systemd's nspawn does the same thing (if it's good enough for them, it's good enough for us)
 	var (
-		devType          = corev1.HostPathFile
+		devType          = corev1.HostPathCharDev
 		hostPathOrCreate = corev1.HostPathDirectoryOrCreate
 		daemonVolumeName = "daemon-mount"
 	)
@@ -746,7 +746,7 @@ func getServicePrefix(req *api.StartWorkspaceRequest) string {
 //
 // The tokens we produce here (e.g. owner token or CLI API token) are likely placed in cookies or transmitted via HTTP.
 // To make the lifes of downstream users easier we'll try and play nice here w.r.t. to the characters used.
-var validCookieChars = []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-.")
+var validCookieChars = []byte("!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}")
 
 func getRandomString(length int) (string, error) {
 	b := make([]byte, length)

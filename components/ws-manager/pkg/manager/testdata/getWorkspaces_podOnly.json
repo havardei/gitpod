@@ -188,7 +188,7 @@
               "runAsUser": 33333
             },
             "terminationMessagePath": "/dev/termination-log",
-            "terminationMessagePolicy": "File",
+            "terminationMessagePolicy": "CharDevice",
             "volumeMounts": [
               {
                 "mountPath": "/workspace",
